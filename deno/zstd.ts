@@ -1,7 +1,15 @@
+import Module from "./zstd.deno.js";
+import { wasm } from "./zstd.encoded.wasm.ts";
 
-import { decode } from "https://deno.land/std@0.209.0/encoding/base64.ts"
-import { wasm } from "./zstd.encoded.wasm.ts"
-import Module from './zstd.deno.js';
+export function decode(b64: string): Uint8Array {
+  const binString = atob(b64);
+  const size = binString.length;
+  const bytes = new Uint8Array(size);
+  for (let i = 0; i < size; i++) {
+    bytes[i] = binString.charCodeAt(i);
+  }
+  return bytes;
+}
 
 const initialized = (() =>
   new Promise<void>((resolve) => {
@@ -10,10 +18,9 @@ const initialized = (() =>
 
 export const init = async () => {
   const bytes = decode(wasm);
-  Module['init'](bytes);
+  Module["init"](bytes);
   await initialized;
 };
-
 
 export const isError = (code: number): number => {
   const _isError = Module["_ZSTD_isError"];
@@ -25,7 +32,6 @@ export const isError = (code: number): number => {
 //   const _getErrorName = Module.cwrap('ZSTD_getErrorName', 'string', ['number']);
 //   return _getErrorName(code);
 // };
-
 
 const compressBound = (size: number): number => {
   const bound = Module["_ZSTD_compressBound"];
@@ -44,7 +50,7 @@ export const compressUsingDict = (
   cctx: number,
   buf: ArrayBuffer,
   dict: ArrayBuffer,
-  level?: number
+  level?: number,
 ) => {
   const bound = compressBound(buf.byteLength);
   const malloc = Module["_malloc"];
@@ -73,7 +79,7 @@ export const compressUsingDict = (
       buf.byteLength,
       pdict,
       dict.byteLength,
-      level ?? 3
+      level ?? 3,
     );
     if (isError(sizeOrError)) {
       throw new Error(`Failed to compress with code ${sizeOrError}`);
@@ -83,7 +89,7 @@ export const compressUsingDict = (
     const data = new Uint8Array(
       Module.HEAPU8.buffer,
       compressed,
-      sizeOrError
+      sizeOrError,
     ).slice();
     free(compressed, bound);
     free(src, buf.byteLength);
@@ -96,7 +102,6 @@ export const compressUsingDict = (
     throw e;
   }
 };
-
 
 export const compress = (buf: ArrayBuffer, level?: number) => {
   const bound = compressBound(buf.byteLength);
@@ -120,7 +125,7 @@ export const compress = (buf: ArrayBuffer, level?: number) => {
       bound,
       src,
       buf.byteLength,
-      level ?? 3
+      level ?? 3,
     );
     if (isError(sizeOrError)) {
       throw new Error(`Failed to compress with code ${sizeOrError}`);
@@ -130,7 +135,7 @@ export const compress = (buf: ArrayBuffer, level?: number) => {
     const data = new Uint8Array(
       Module.HEAPU8.buffer,
       compressed,
-      sizeOrError
+      sizeOrError,
     ).slice();
     free(compressed, bound);
     free(src, buf.byteLength);
@@ -141,7 +146,6 @@ export const compress = (buf: ArrayBuffer, level?: number) => {
     throw e;
   }
 };
-
 
 const getFrameContentSize = (src: number, size: number): number => {
   const getSize = Module["_ZSTD_getFrameContentSize"];
@@ -160,7 +164,7 @@ export const decompressUsingDict = (
   dctx: number,
   buf: ArrayBuffer,
   dict: ArrayBuffer,
-  opts: DecompressOption = { defaultHeapSize: 1024 * 1024 } // Use 1MB on default if it is failed to get content size.
+  opts: DecompressOption = { defaultHeapSize: 1024 * 1024 }, // Use 1MB on default if it is failed to get content size.
 ): ArrayBuffer => {
   const malloc = Module["_malloc"];
   const src = malloc(buf.byteLength);
@@ -180,7 +184,7 @@ export const decompressUsingDict = (
       src,
       buf.byteLength,
       pdict,
-      dict.byteLength
+      dict.byteLength,
     );
     if (isError(sizeOrError)) {
       throw new Error(`Failed to compress with code ${sizeOrError}`);
@@ -190,7 +194,7 @@ export const decompressUsingDict = (
     const data = new Uint8Array(
       Module.HEAPU8.buffer,
       heap,
-      sizeOrError
+      sizeOrError,
     ).slice();
     free(heap, size);
     free(src, buf.byteLength);
@@ -204,14 +208,13 @@ export const decompressUsingDict = (
   }
 };
 
-
 export type DecompressOption = {
   defaultHeapSize?: number;
 };
 
 export const decompress = (
   buf: ArrayBuffer,
-  opts: DecompressOption = { defaultHeapSize: 1024 * 1024 } // Use 1MB on default if it is failed to get content size.
+  opts: DecompressOption = { defaultHeapSize: 1024 * 1024 }, // Use 1MB on default if it is failed to get content size.
 ): ArrayBuffer => {
   const malloc = Module["_malloc"];
   const src = malloc(buf.byteLength);
@@ -238,7 +241,7 @@ export const decompress = (
     const data = new Uint8Array(
       Module.HEAPU8.buffer,
       heap,
-      sizeOrError
+      sizeOrError,
     ).slice();
     free(heap, size);
     free(src, buf.byteLength);
