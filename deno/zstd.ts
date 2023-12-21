@@ -1,5 +1,5 @@
 
-import { decode } from "https://deno.land/std/encoding/base64.ts"
+import { decode } from "https://deno.land/std@0.209.0/encoding/base64.ts"
 import { wasm } from "./zstd.encoded.wasm.ts"
 import Module from './zstd.deno.js';
 
